@@ -10,6 +10,16 @@ const handleError = (err) => {
   let errors = { email: "", password: "" };
   console.log(err.code, "error code");
 
+  if (err.message === "Invalid credentials email") {
+    errors.email = "Invalid credentials";
+    return errors;
+  }
+
+  if (err.message === "Invalid credentials password") {
+    errors.email = "Invalid credentials";
+    return errors;
+  }
+
   if (err.code === 11000) {
     errors.email = "Email is already used";
     return errors;
@@ -19,9 +29,8 @@ const handleError = (err) => {
     Object.values(err.errors).forEach(({ properties }) => {
       errors[properties.path] = properties.message;
     });
+    return errors;
   }
-
-  return errors;
 };
 
 module.exports.register = async (req, res, next) => {
@@ -45,6 +54,16 @@ module.exports.register = async (req, res, next) => {
 
 module.exports.login = async (req, res, next) => {
   try {
+    const { email, password } = req.body;
+    const user = await UserModel.login(email, password);
+    const token = createToken(user._id);
+
+    res.cookie("jwt", token, {
+      withCredentials: true,
+      httpOnly: true,
+      maxAge: maxAge * 1000,
+    });
+    res.status(200).json({ user: user._id, created: true });
   } catch (err) {
     console.log(err);
     const errors = handleError(err);
